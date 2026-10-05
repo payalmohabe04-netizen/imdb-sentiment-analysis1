@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IMDB Sentiment Analyzer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.5px;
+    }
+    header p {
+      margin-top: 6px;
+      color: #94a3b8;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 28px;
+      width: 100%;
+      max-width: 700px;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 160px;
+      padding: 14px;
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: #6366f1; }
+    textarea::placeholder { color: #475569; }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    button {
+      padding: 12px 28px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #analyzeBtn { background: #6366f1; color: #fff; flex: 1; }
+    #clearBtn   { background: #334155; color: #e2e8f0; }
+
+    /* Result */
+    #result {
+      display: none;
+      margin-top: 24px;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    #result.positive { background: #064e3b; border: 1px solid #10b981; }
+    #result.negative { background: #450a0a; border: 1px solid #ef4444; }
+
+    .emoji { font-size: 2.4rem; margin-bottom: 8px; }
+    .sentiment-label { font-size: 1.5rem; font-weight: 700; }
+    .positive .sentiment-label { color: #34d399; }
+    .negative .sentiment-label { color: #f87171; }
+    .confidence { margin-top: 8px; font-size: 0.9rem; color: #94a3b8; }
+
+    /* Confidence bar */
+    .conf-bar-wrap {
+      margin-top: 14px;
+      background: #1e293b;
+      border-radius: 99px;
+      height: 8px;
+      overflow: hidden;
+      width: 80%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .conf-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.6s ease;
+    }
+    .positive .conf-bar-fill { background: #10b981; }
+    .negative .conf-bar-fill { background: #ef4444; }
+
+    /* Loader */
+    .loader {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.9rem;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 2px solid #334155;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Nav */
+    .nav-link {
+      display: inline-block;
+      margin-top: 4px;
+      color: #6366f1;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .nav-link:hover { text-decoration: underline; }
+
+    /* Examples */
+    .examples { margin-top: 20px; }
+    .examples h3 { font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+    .example-btn {
+      display: inline-block;
+      margin: 4px;
+      padding: 6px 12px;
+      background: #1e3a5f;
+      border: 1px solid #2563eb;
+      border-radius: 20px;
+      color: #93c5fd;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .example-btn:hover { background: #1e40af; }
+
+    footer { margin-top: auto; padding-top: 32px; color: #475569; font-size: 0.78rem; text-align: center; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎬 IMDB Sentiment Analyzer</h1>
+  <p>Powered by Logistic Regression + TF-IDF &nbsp;·&nbsp; Trained on 50,000 movie reviews</p>
+  <a class="nav-link" href="/report">📊 View Evaluation Report</a>
+</header>
+
+<div class="card">
+  <label for="reviewInput">Movie Review</label>
+  <textarea id="reviewInput" placeholder="Paste or type a movie review here…"></textarea>
+
+  <div class="examples">
+    <h3>Quick Examples</h3>
+    <span class="example-btn" onclick="setExample('positive')">👍 Positive sample</span>
+    <span class="example-btn" onclick="setExample('negative')">👎 Negative sample</span>
+  </div>
+
+  <div class="btn-row">
+    <button id="analyzeBtn" onclick="analyze()">Analyze Sentiment</button>
+    <button id="clearBtn" onclick="clearAll()">Clear</button>
+  </div>
+
+  <div class="loader" id="loader">
+    <span class="spinner"></span> Analyzing…
+  </div>
+
+  <div id="errorBox" style="display:none; margin-top:18px; padding:14px 16px; background:#450a0a; border:1px solid #ef4444; border-radius:8px; color:#fca5a5; font-size:0.9rem; line-height:1.5;"></div>
+
+  <div id="result">
+    <div class="emoji" id="emoji"></div>
+    <div class="sentiment-label" id="sentimentLabel"></div>
+    <div class="confidence" id="confidenceText"></div>
+    <div class="conf-bar-wrap">
+      <div class="conf-bar-fill" id="confBar"></div>
+    </div>
+  </div>
+</div>
+
+<footer>IMDB Sentiment Analysis Pipeline &nbsp;·&nbsp; Logistic Regression + TF-IDF</footer>
+
+<script>
+  const EXAMPLES = {
+    positive: "This film was an absolute masterpiece! The performances were stunning and the story kept me engaged throughout. The director has created something truly special — a movie that will stay with me for years.",
+    negative: "What a complete waste of time. The plot made no sense, the acting was terrible, and I walked out after the first hour. One of the worst movies I have ever seen in my life."
+  };
+
+  function setExample(type) {
+    document.getElementById("reviewInput").value = EXAMPLES[type];
+  }
+
+  function showError(msg) {
+    const box = document.getElementById("errorBox");
+    box.textContent = "⚠ " + msg;
+    box.style.display = "block";
+    document.getElementById("result").style.display = "none";
+  }
+
+  async function analyze() {
+    const review = document.getElementById("reviewInput").value.trim();
+    if (!review) { alert("Please enter a review first."); return; }
+
+    const btn    = document.getElementById("analyzeBtn");
+    const loader = document.getElementById("loader");
+    const result = document.getElementById("result");
+    const errorBox = document.getElementById("errorBox");
+
+    btn.disabled   = true;
+    loader.style.display = "block";
+    result.style.display = "none";
+    errorBox.style.display = "none";
+
+    try {
+      // Guard: must be served via Flask, not opened as a local file
+      if (window.location.protocol === "file:") {
+        showError("Please open this page via the Flask server: http://127.0.0.1:5000");
+        return;
+      }
+
+      const resp = await fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ review })
+      });
+
+      // Try to parse JSON — catch malformed responses gracefully
+      let data;
+      try {
+        data = await resp.json();
+      } catch (parseErr) {
+        showError("Server returned an unexpected response (not JSON). Make sure the Flask server is running at http://127.0.0.1:5000");
+        return;
+      }
+
+      if (!resp.ok || data.error) {
+        showError(data.error || `Server error (HTTP ${resp.status})`);
+        return;
+      }
+
+      const pct = Math.round(data.confidence * 100);
+      result.className = data.sentiment;
+      document.getElementById("emoji").textContent          = data.sentiment === "positive" ? "😄" : "😞";
+      document.getElementById("sentimentLabel").textContent = data.sentiment.toUpperCase();
+      document.getElementById("confidenceText").textContent = `Confidence: ${pct}%`;
+      document.getElementById("confBar").style.width        = pct + "%";
+
+      result.style.display = "block";
+    } catch (e) {
+      // Network-level failure (server not running, CORS, etc.)
+      if (e instanceof TypeError && e.message.includes("fetch")) {
+        showError("Cannot reach the server. Please run: python app.py  — then open http://127.0.0.1:5000");
+      } else {
+        showError("Unexpected error: " + e.message);
+      }
+    } finally {
+      btn.disabled = false;
+      loader.style.display = "none";
+    }
+  }
+
+  function clearAll() {
+    document.getElementById("reviewInput").value = "";
+    document.getElementById("result").style.display = "none";
+    document.getElementById("errorBox").style.display = "none";
+  }
+
+  document.getElementById("reviewInput").addEventListener("keydown", e => {
+    if (e.ctrlKey && e.key === "Enter") analyze();
+  });
+</script>
+</body>
+</html>
