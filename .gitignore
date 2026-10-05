@@ -1,0 +1,21 @@
+# Large data files - do not commit
+IMDB Dataset.csv
+IMDB Dataset1.csv
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+env/
+.env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
