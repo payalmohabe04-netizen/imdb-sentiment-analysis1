@@ -94,5 +94,5 @@ def report():
 
 if __name__ == "__main__":
     print("Starting Flask API on http://127.0.0.1:5000")
-    app.run(debug=False, port=5000, use_reloader=False)
-    # app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+    # app.run(debug=False, port=5000, use_reloader=False)
+    app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
